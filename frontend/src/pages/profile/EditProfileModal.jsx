@@ -1,18 +1,45 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import toast from "react-hot-toast";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 const EditProfileModal = () => {
-	const [formData, setFormData] = useState({
-		fullName: "",
-		username: "",
-		email: "",
-		bio: "",
-		link: "",
-		newPassword: "",
-		currentPassword: "",
-	});
+
+	const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+	const [formData, setFormData] = useState(authUser);
+	const queryClient = useQueryClient();
 
 	const handleInputChange = (e) => {
 		setFormData({ ...formData, [e.target.name]: e.target.value });
+	};
+
+	const { mutate: updateProfile, isLoading } = useMutation({
+		mutationFn: async () => {
+			const res = await fetch("/api/user/update-profile", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(formData),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				throw new Error(data.message);
+			}
+			return data;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries(["authUser"]);
+			document.getElementById("edit_profile_modal").close();
+			toast.success("Profile updated successfully");
+		},
+		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
+
+	const handleSubmit = async () => {
+		updateProfile();
 	};
 
 	return (
@@ -30,7 +57,7 @@ const EditProfileModal = () => {
 						className='flex flex-col gap-4'
 						onSubmit={(e) => {
 							e.preventDefault();
-							alert("Profile updated successfully");
+							handleSubmit();
 						}}
 					>
 						<div className='flex flex-wrap gap-2'>
@@ -94,7 +121,8 @@ const EditProfileModal = () => {
 							name='link'
 							onChange={handleInputChange}
 						/>
-						<button className='btn btn-primary rounded-full btn-sm text-white'>Update</button>
+						<button className='btn btn-primary rounded-full btn-sm text-white'>{
+							(isLoading) ? <LoadingSpinner size="sm"/> : "Update"}</button>
 					</form>
 				</div>
 				<form method='dialog' className='modal-backdrop'>

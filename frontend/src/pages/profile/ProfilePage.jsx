@@ -1,39 +1,96 @@
 import { useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import Posts from "../../components/common/Posts";
 import ProfileHeaderSkeleton from "../../components/skeletons/ProfileHeaderSkeleton";
 import EditProfileModal from "./EditProfileModal";
-
-import { POSTS } from "../../utils/db/dummy";
+import { formatMemberSince } from "../../utils/db/timeFromater.js";
+import UserListModal from "../../components/UserListModal";
 
 import { FaArrowLeft } from "react-icons/fa6";
 import { IoCalendarOutline } from "react-icons/io5";
 import { FaLink } from "react-icons/fa";
 import { MdEdit } from "react-icons/md";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import useFollow from "../../../hooks/useFollow";
+import toast from "react-hot-toast";
+import LoadingSpinner from "../../components/common/LoadingSpinner.jsx";
 
 const ProfilePage = () => {
+	const { username } = useParams()
+	const queryClient = useQueryClient();
+
 	const [coverImg, setCoverImg] = useState(null);
 	const [profileImg, setProfileImg] = useState(null);
 	const [feedType, setFeedType] = useState("posts");
+	const { toggleFollow } = useFollow();
+
+	const [modalType, setModalType] = useState(null); // New state for modal type
+	const [showModal, setShowModal] = useState(false); // State to toggle the modal
+
+	const handleOpenModal = (type) => {
+		setModalType(type);
+		setShowModal(true);
+	};
+
+	const handleCloseModal = () => {
+		setModalType(null);
+		setShowModal(false);
+	};
+
+
+
+	const { mutateAsync: updateProfile, isPending: uploadingPicture } = useMutation({
+		mutationFn: async () => {
+			const res = await fetch("/api/user/update-profile", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					profilePicture: profileImg,
+					coverPicture: coverImg,
+				}),
+			});
+			const result = await res.json();
+			if (!res.ok) {
+				throw new Error(result.message);
+			}
+			return result;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+			queryClient.invalidateQueries({ queryKey: ["authUser"] });
+			toast.success("Profile updated successfully");
+		},
+		onError: (error) => {
+			console.log(error.message);
+			toast.error("Failed to update profile");
+		},
+	});
 
 	const coverImgRef = useRef(null);
 	const profileImgRef = useRef(null);
 
-	const isLoading = false;
-	const isMyProfile = true;
+	const { data: user, isLoading } = useQuery({
+		queryKey: ["userProfile", username],
+		queryFn: async () => {
+			const res = await fetch(`/api/user/profile/${username}`);
+			const data = await res.json();
+			if (!res.ok) {
+				throw new Error(data.message);
+			}
+			return data;
+		},
+	});
 
-	const user = {
-		_id: "1",
-		fullName: "John Doe",
-		username: "johndoe",
-		profileImg: "/public/avatar.png",
-		coverImg: "/cover.png",
-		bio: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-		link: "https://youtube.com/@asaprogrammer_",
-		following: ["1", "2", "3"],
-		followers: ["1", "2", "3"],
-	};
+	const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+
+	const isMyProfile = user?._id === authUser?._id;
+	const memberSinsce = formatMemberSince(user?.createdAt);
+	const alredyFollowing = user?.followers.includes(authUser?._id);
+
+	const { data: POSTS } = useQuery({ queryKey: ["posts", username] });
 
 	const handleImgChange = (e, state) => {
 		const file = e.target.files[0];
@@ -49,7 +106,7 @@ const ProfilePage = () => {
 
 	return (
 		<>
-			<div className='flex-[4_4_0]  border-r border-gray-700 min-h-screen '>
+			<div className='flex-[4_4_0] border-r border-gray-700 min-h-screen '>
 				{/* HEADER */}
 				{isLoading && <ProfileHeaderSkeleton />}
 				{!isLoading && !user && <p className='text-center text-lg mt-4'>User not found</p>}
@@ -68,7 +125,7 @@ const ProfilePage = () => {
 							{/* COVER IMG */}
 							<div className='relative group/cover'>
 								<img
-									src={coverImg || user?.coverImg || "/avatar.png"}
+									src={coverImg || user?.coverPicture || "https://www.schudio.com/wp-content/uploads/2024/08/twitter-embed-header.jpg"}
 									className='h-52 w-full object-cover'
 									alt='cover image'
 								/>
@@ -98,7 +155,7 @@ const ProfilePage = () => {
 								{/* USER AVATAR */}
 								<div className='avatar absolute -bottom-16 left-4'>
 									<div className='w-32 rounded-full relative group/avatar'>
-										<img src={profileImg || user?.profileImg || "/avatar.png"} />
+										<img src={profileImg || user?.profilePicture || "/avatar.png"} />
 										{isMyProfile && (
 											<div className='absolute top-5 right-3 p-1 bg-primary rounded-full group-hover/avatar:opacity-100 opacity-0 cursor-pointer'>
 												<MdEdit
@@ -114,18 +171,27 @@ const ProfilePage = () => {
 								{isMyProfile && <EditProfileModal />}
 								{!isMyProfile && (
 									<button
-										className='btn btn-outline rounded-full px-5 btn-sm'
-										onClick={() => alert("Followed successfully")}
+										className='btn btn-outline rounded-full btn-sm w-20'
+										onClick={(e) => {
+											e.preventDefault();
+											toggleFollow(user?._id)
+										}}
 									>
-										Follow
+										{alredyFollowing ? "Unfollow" : "Follow"}
 									</button>
 								)}
 								{(coverImg || profileImg) && (
 									<button
 										className='btn btn-primary rounded-full btn-sm text-white px-4 ml-2'
-										onClick={() => alert("Profile updated successfully")}
+										onClick={async () => {
+											if (coverImg || profileImg) {
+												await updateProfile();
+												setCoverImg(null);
+												setProfileImg(null);
+											}
+										}}
 									>
-										Update
+										{uploadingPicture ? <LoadingSpinner size="sm" /> : "Save"}
 									</button>
 								)}
 							</div>
@@ -155,20 +221,33 @@ const ProfilePage = () => {
 									)}
 									<div className='flex gap-2 items-center'>
 										<IoCalendarOutline className='w-4 h-4 text-slate-500' />
-										<span className='text-sm text-slate-500'>{user.createAt}</span>
+										<span className='text-sm text-slate-500'>{memberSinsce}</span>
 									</div>
 								</div>
-								<div className='flex gap-2'>
-									<div className='flex gap-1 items-center'>
-										<span className='font-bold text-xs'>{user?.following.length}</span>
-										<span className='text-slate-500 text-xs'>Following</span>
+								<div className="flex gap-2">
+									<div
+										className="flex gap-1 items-center cursor-pointer"
+										onClick={() => handleOpenModal("followings")}
+									>
+										<span className="font-bold text-xs">{user?.followings.length}</span>
+										<span className="text-slate-500 text-xs">Following</span>
 									</div>
-									<div className='flex gap-1 items-center'>
-										<span className='font-bold text-xs'>{user?.followers.length}</span>
-										<span className='text-slate-500 text-xs'>Followers</span>
+									<div
+										className="flex gap-1 items-center cursor-pointer"
+										onClick={() => handleOpenModal("followers")}
+									>
+										<span className="font-bold text-xs">{user?.followers.length}</span>
+										<span className="text-slate-500 text-xs">Followers</span>
 									</div>
 								</div>
 							</div>
+							{showModal && (
+								<UserListModal
+									type={modalType}
+									userId={user?._id}
+									onClose={handleCloseModal}
+								/>
+							)}
 							<div className='flex w-full border-b border-gray-700 mt-4'>
 								<div
 									className='flex justify-center flex-1 p-3 hover:bg-secondary transition duration-300 relative cursor-pointer'
@@ -181,10 +260,10 @@ const ProfilePage = () => {
 								</div>
 								<div
 									className='flex justify-center flex-1 p-3 text-slate-500 hover:bg-secondary transition duration-300 relative cursor-pointer'
-									onClick={() => setFeedType("likes")}
+									onClick={() => setFeedType("liked")}
 								>
-									Likes
-									{feedType === "likes" && (
+									Liked
+									{feedType === "liked" && (
 										<div className='absolute bottom-0 w-10  h-1 rounded-full bg-primary' />
 									)}
 								</div>
@@ -192,7 +271,7 @@ const ProfilePage = () => {
 						</>
 					)}
 
-					<Posts />
+					{user && <Posts feedType={feedType} userId={user?._id} />}
 				</div>
 			</div>
 		</>

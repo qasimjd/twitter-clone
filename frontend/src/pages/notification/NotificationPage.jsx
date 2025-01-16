@@ -1,35 +1,53 @@
 import { Link } from "react-router-dom";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { IoSettingsOutline } from "react-icons/io5";
 import { FaUser } from "react-icons/fa";
-import { FaHeart } from "react-icons/fa6";
+import { FaHeart, FaMessage } from "react-icons/fa6";
 
 const NotificationPage = () => {
-	const isLoading = false;
-	const notifications = [
-		{
-			_id: "1",
-			from: {
-				_id: "1",
-				username: "johndoe",
-				profileImg: "/avatars/boy2.png",
-			},
-			type: "follow",
+
+	const queryClient = useQueryClient();
+	const { data: notifications, isLoading } = useQuery({
+		queryKey: ["notifications"],
+		queryFn: async () => {
+			const response = await fetch("/api/notifications");
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error("Something went wrong");
+			}
+			return data;
 		},
-		{
-			_id: "2",
-			from: {
-				_id: "2",
-				username: "janedoe",
-				profileImg: "/avatars/girl1.png",
-			},
-			type: "like",
+
+	});
+
+	const { mutate } = useMutation({
+		mutationFn: async () => {
+			const response = await fetch("/api/notifications", {
+				method: "DELETE",
+			});
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error("Something went wrong");
+			}
+			return data;
 		},
-	];
+		onSuccess: () => {
+			queryClient.invalidateQueries(["notifications"]);
+		},
+		onError: (error) => {
+			console.log(error);
+		}
+	});
 
 	const deleteNotifications = () => {
-		alert("All notifications deleted");
+		if (notifications.length === 0) return;
+		notifications.length > 0 &&
+			confirm("Are you sure you want to delete all notifications?") &&
+			mutate();
 	};
 
 	return (
@@ -56,21 +74,22 @@ const NotificationPage = () => {
 						<LoadingSpinner size='lg' />
 					</div>
 				)}
-				{notifications?.length === 0 && <div className='text-center p-4 font-bold'>No notifications 🤔</div>}
+				{notifications?.length === 0 && <div className='text-center p-4 text-slate-500'>No notifications found.</div>}
 				{notifications?.map((notification) => (
 					<div className='border-b border-gray-700' key={notification._id}>
 						<div className='flex gap-2 p-4'>
 							{notification.type === "follow" && <FaUser className='w-7 h-7 text-primary' />}
 							{notification.type === "like" && <FaHeart className='w-7 h-7 text-red-500' />}
+							{notification.type === "comment" && <FaMessage className='w-7 h-7 text-slate-600' />}
 							<Link to={`/profile/${notification.from.username}`}>
 								<div className='avatar'>
 									<div className='w-8 rounded-full'>
-										<img src={notification.from.profileImg || "/avatar-placeholder.png"} />
+										<img src={notification.from.profilePicture || "/avatar.png"} />
 									</div>
 								</div>
 								<div className='flex gap-1'>
 									<span className='font-bold'>@{notification.from.username}</span>{" "}
-									{notification.type === "follow" ? "followed you" : "liked your post"}
+									{notification.type === "follow" ? "followed you" : notification.type === "like" ? "liked your post" : notification.type === "comment" && "commented on your post"}
 								</div>
 							</Link>
 						</div>

@@ -58,7 +58,7 @@ export const followUnfollowUser = async (req, res) => {
 export const grtsugestedUsers = async (req, res) => {
     try {
         const myId = await User.findById(req.user._id);
-        const sugestedUsers = await User.find({ _id: { $nin: myId.followings } }).select('-password').limit(5);
+        const sugestedUsers = await User.find({ _id: { $nin: [...myId.followings, myId._id] } }).select('-password').limit(4);
         res.status(200).json(sugestedUsers);
     }
     catch (error) {
@@ -79,48 +79,84 @@ export const updateProfile = async (req, res) => {
         }
 
         if (currentPassword && newPassword) {
-
             const isPasswordMatch = await bcrypt.compare(currentPassword, user.password);
             if (!isPasswordMatch) return res.status(400).json({ message: 'Invalid password' });
             if (newPassword.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
 
-            const salt = await bcrypt.genSalt(10)
+            const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(newPassword, salt);
             user.password = hashedPassword;
         }
 
-
+        // Handle Profile Picture
         if (profilePicture) {
             if (user.profilePicture) {
                 await cloudinary.uploader.destroy(user.profilePicture.split('/').pop().split('.')[0]);
             }
-            uploadedResponse = await cloudinary.uploader.upload(profilePicture);
-            profilePicture = uploadedResponse.secure_url
+            const uploadedResponse = await cloudinary.uploader.upload(profilePicture, { folder: 'profile_pictures' });
+            user.profilePicture = uploadedResponse.secure_url;
         }
 
+        // Handle Cover Picture
         if (coverPicture) {
             if (user.coverPicture) {
-                await cloudinary.uploader.destroy(user.coverPicture.split('/').pop().split('.')[0])
+                await cloudinary.uploader.destroy(user.coverPicture.split('/').pop().split('.')[0]);
             }
-            uploadedResponse = await cloudinary.uploader.upload(coverPicture);
-            coverPicture = uploadedResponse.secure_url
+            const uploadedResponse = await cloudinary.uploader.upload(coverPicture, { folder: 'cover_pictures' });
+            user.coverPicture = uploadedResponse.secure_url;
         }
 
-        user.profilePicture = profilePicture || user.profilePicture
-        user.coverPicture = coverPicture || user.coverPicture
-        user.fullName = fullName || user.fullName
-        user.email = email || user.email
-        user.username = username || user.username
-        user.bio = bio || user.bio
-        user.link = link || user.link
+        user.fullName = fullName || user.fullName;
+        user.email = email || user.email;
+        user.username = username || user.username;
+        user.bio = bio || user.bio;
+        user.link = link || user.link;
 
         await user.save();
-        user.password = null
-        return res.status(200).json(user);
 
+        user.password = null; // Remove password from response
+        return res.status(200).json(user);
     } catch (error) {
-        console.log('error in updateProfile function', error)
+        console.log('error in updateProfile function', error);
         res.status(500).json({ message: error.message });
     }
-}
+};
 
+
+// Fetch followers
+export const getFollowers = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Find user by ID and populate the followers array
+        const user = await User.findById(userId).populate("followers", "fullName profilePicture username followers followings");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json(user.followers);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "An error occurred while fetching followers" });
+    }
+};
+
+// Fetch followings
+export const getFollowings = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Find user by ID and populate the followings array
+        const user = await User.findById(userId).populate("followings", "fullName profilePicture username followers followings");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json(user.followings);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "An error occurred while fetching followings" });
+    }
+};

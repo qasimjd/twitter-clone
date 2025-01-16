@@ -1,14 +1,36 @@
 import { Link } from "react-router-dom";
 import RightPanelSkeleton from "../skeletons/RightPanelSkeleton";
-import { USERS_FOR_RIGHT_PANEL } from "../../utils/db/dummy";
+import { useQuery } from "@tanstack/react-query";
+import useFollow from "../../../hooks/useFollow";
 
 const RightPanel = () => {
-	const isLoading = false;
+
+	const { data: sugestedUsers, isLoading } = useQuery({
+		queryKey: ["usersForRightPanel"],
+		queryFn: async () => {
+			const response = await fetch("/api/user/sugested");
+			if (!response.ok) {
+				throw new Error("Something went wrong");
+			}
+			const data = await response.json();
+			return data;
+		},
+		onSuccess: (data) => {
+			console.log(data);
+		},
+		onError: (error) => {
+			console.log(error);
+		},
+	});
+
+	const { toggleFollow } = useFollow();
+
+	if (sugestedUsers?.length === 0) return <div className="md:w-64 w-0"></div>
 
 	return (
-		<div className='hidden lg:block my-4 mx-2'>
-			<div className='bg-[#16181C] p-4 rounded-md sticky top-2'>
-				<p className='font-bold'>Who to follow</p>
+		<div className='hidden lg:block mx-2'>
+			<div className='bg-[#16181C] p-4 rounded-md sticky top-4'>
+				<p className='font-bold pb-2'>Who to follow</p>
 				<div className='flex flex-col gap-4'>
 					{/* item */}
 					{isLoading && (
@@ -20,7 +42,7 @@ const RightPanel = () => {
 						</>
 					)}
 					{!isLoading &&
-						USERS_FOR_RIGHT_PANEL?.map((user) => (
+						sugestedUsers?.map((user) => (
 							<Link
 								to={`/profile/${user.username}`}
 								className='flex items-center justify-between gap-4'
@@ -29,7 +51,7 @@ const RightPanel = () => {
 								<div className='flex gap-2 items-center'>
 									<div className='avatar'>
 										<div className='w-8 rounded-full'>
-											<img src={user.profileImg || "/avatar-placeholder.png"} />
+											<img src={user.profilePicture || "/avatar.png"} />
 										</div>
 									</div>
 									<div className='flex flex-col'>
@@ -41,8 +63,11 @@ const RightPanel = () => {
 								</div>
 								<div>
 									<button
-										className='btn bg-white text-black hover:bg-white hover:opacity-90 rounded-full btn-sm'
-										onClick={(e) => e.preventDefault()}
+										className='btn bg-white text-black hover:bg-white hover:opacity-90 rounded-full btn-sm w-20'
+										onClick={(e) => {
+											e.preventDefault()
+											toggleFollow(user._id);
+										}}
 									>
 										Follow
 									</button>
