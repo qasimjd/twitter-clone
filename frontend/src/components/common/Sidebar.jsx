@@ -37,7 +37,7 @@ const Sidebar = () => {
 		<div className="md:flex-[2_2_0] w-18 max-w-52">
 		  {/* Sidebar Wrapper */}
 		  <div
-			className="sticky top-2 h-screen flex flex-col border-r border-gray-700 w-20 md:w-full overflow-y-auto"
+			className="sticky top-6 h-screen flex flex-col border-r border-gray-700 w-20 md:w-full overflow-y-auto"
 		  >
 			{/* Logo Section */}
 			<Link to="/" className="flex justify-center md:justify-start">

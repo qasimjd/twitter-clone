@@ -27,12 +27,12 @@ app.use("/api/notifications", notificationRoutes);
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '/frontend/dist')));
 
-    app.get('*', (req, res) => {
+    app.get('*', (_, res) => {
         res.sendFile(path.resolve(__dirname, 'frontend', 'dist', 'index.html'));
     });
 }
 
+connectDB();
 app.listen(port, () => {
-    connectDB();
     console.log(`Server is running on http://localhost:${port}`);
 });
