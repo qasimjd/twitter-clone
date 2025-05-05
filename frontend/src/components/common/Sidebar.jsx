@@ -13,7 +13,7 @@ const Sidebar = () => {
 
 	const { mutate: logout } = useMutation({
 		mutationFn: async () => {
-			const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
+			const response = await fetch("/api/auth/logout", {
 				method: "POST",
 			});
 			if (!response.ok) {

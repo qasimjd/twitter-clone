@@ -42,7 +42,7 @@ const ProfilePage = () => {
 
 	const { mutateAsync: updateProfile, isPending: uploadingPicture } = useMutation({
 		mutationFn: async () => {
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/update-profile`, {
+			const res = await fetch("/api/user/update-profile", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -75,7 +75,7 @@ const ProfilePage = () => {
 	const { data: user, isLoading } = useQuery({
 		queryKey: ["userProfile", username],
 		queryFn: async () => {
-			const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile/${username}`);
+			const res = await fetch(`/api/user/profile/${username}`);
 			const data = await res.json();
 			if (!res.ok) {
 				throw new Error(data.message);

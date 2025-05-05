@@ -8,7 +8,7 @@ const UserListModal = ({ type, userId, onClose }) => {
     const { data, isLoading } = useQuery({
         queryKey: [type, userId],
         queryFn: async () => {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/user/${type}/${userId}`);
+            const res = await fetch(`/api/user/${type}/${userId}`);
             const result = await res.json();
             if (!res.ok) {
                 throw new Error(result.message);

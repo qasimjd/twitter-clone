@@ -16,7 +16,7 @@ function App() {
 	const { data: authUser, isLoading, error } = useQuery({
 		queryKey: ['authUser'],
 		queryFn: async () => {
-			const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/check`);
+			const response = await fetch('/api/auth/check');
 			if (response.status === 401) return null;
 			if (!response.ok) {
 				throw new Error(data.message || 'Failed to fetch');

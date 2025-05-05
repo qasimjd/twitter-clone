@@ -23,3 +23,9 @@ app.use('/api/posts', postRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 export default app;
+
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(process.env.PORT || 5000, () =>
+      console.log(`Server running on port ${process.env.PORT || 5000}`)
+    );
+  }
