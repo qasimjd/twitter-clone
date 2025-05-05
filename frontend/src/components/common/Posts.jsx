@@ -8,10 +8,10 @@ const Posts = ({ feedType, userId }) => {
 
 
 	const getPostEndpoint = () => {
-		if (feedType === "forYou") return "/api/posts/allPost";
-		if (feedType === "following") return "/api/posts/following";
-		if (feedType === "posts") return `/api/posts/user/${username}`;
-		if (feedType === "liked") return `/api/posts/liked/${userId}`;
+		if (feedType === "forYou") return `${import.meta.env.VITE_API_URL}/api/posts/allPost`;
+		if (feedType === "following") return `${import.meta.env.VITE_API_URL}/api/posts/following`;
+		if (feedType === "posts") return `${import.meta.env.VITE_API_URL}/api/posts/user/${username}`;
+		if (feedType === "liked") return `${import.meta.env.VITE_API_URL}/api/posts/liked/${userId}`;
 
 		return "/api/posts/allPost";
 	}

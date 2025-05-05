@@ -6,7 +6,7 @@ const useFollow = () => {
 
   const { mutate: toggleFollow } = useMutation({
     mutationFn: async (userId) => {
-      const response = await fetch(`/api/user/follow-unfollow/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/follow-unfollow/${userId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });

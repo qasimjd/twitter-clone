@@ -8,7 +8,7 @@ const RightPanel = () => {
 	const { data: sugestedUsers, isLoading } = useQuery({
 		queryKey: ["usersForRightPanel"],
 		queryFn: async () => {
-			const response = await fetch("/api/user/sugested");
+			const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/sugested`);
 			if (!response.ok) {
 				throw new Error("Something went wrong");
 			}
